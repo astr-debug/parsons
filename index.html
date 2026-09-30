@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python: собери программу</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#e9eff2; --surface:#ffffff; --ink:#14202b; --muted:#566674; --line:#c7d3da;
+  --accent:#1d5c87; --accent-ink:#ffffff; --strip:#dde7ed;
+  --ok:#17694a; --ok-bg:#e1f3ea; --bad:#a93325; --bad-bg:#fbe8e4; --blank:#fff0b3; --blank-line:#d6bd52;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 56px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+h1{font-size:1.3rem;margin:0;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.15rem;margin:0 0 6px;font-weight:700}
+h3{font-size:.95rem;margin:0 0 8px;color:var(--muted);font-weight:600}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.lang button{border:0;background:transparent;padding:6px 12px;font:inherit;font-size:.9rem;cursor:pointer;color:var(--muted)}
+.lang button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px}
+.card p{margin:0 0 12px;max-width:68ch}
+.meta{color:var(--muted);font-size:.9rem;margin:0 0 2px!important}
+label{display:block;font-weight:600;margin:14px 0 6px}
+input[type=text]{width:100%;max-width:320px;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:6px}
+.check{display:flex;gap:10px;align-items:flex-start;font-weight:400;margin:14px 0}
+.check input{margin-top:5px}
+.btn{font:inherit;font-weight:600;border-radius:6px;padding:9px 16px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.secondary{background:var(--surface);color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f2a900;outline-offset:2px}
+.progress{display:flex;gap:6px;margin-bottom:14px}
+.progress span{flex:1;height:6px;border-radius:3px;background:var(--line)}
+.progress .done{background:var(--accent)}
+.progress .current{background:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1.25fr;gap:16px;margin-top:14px}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.bank,.sol{min-height:130px}
+.bank{display:flex;flex-direction:column;align-items:stretch}
+.empty{color:var(--muted);font-size:.9rem;padding:10px 2px}
+.block{display:block;width:100%;text-align:left;font-family:var(--mono);font-size:.88rem;white-space:pre;overflow-x:auto;
+  background:var(--strip);border:1px solid var(--line);border-left:5px solid var(--accent);border-radius:4px;padding:7px 10px;margin:0 0 6px;color:var(--ink)}
+button.block{cursor:pointer}
+button.block:hover:not(:disabled){background:#cfdde6}
+button.block:disabled{opacity:.5;cursor:not-allowed}
+.sol{background:#fafcfd;border:1px solid var(--line);border-radius:6px;padding:8px}
+.row{display:flex;align-items:stretch;gap:6px;margin-bottom:6px}
+.row .block{flex:1;margin:0;display:flex;align-items:center;min-width:0}
+.row.dragging{opacity:.4}
+.ln{width:2em;text-align:right;color:var(--muted);font-family:var(--mono);font-size:.82rem;padding-top:9px;flex:none}
+.ctl{display:flex;gap:3px;flex:none}
+.ctl button{border:1px solid var(--line);background:var(--surface);border-radius:4px;min-width:34px;font:inherit;cursor:pointer}
+.ctl button:disabled{opacity:.4;cursor:not-allowed}
+select.blank{font:inherit;background:var(--blank);border:1px solid var(--blank-line);border-radius:3px;padding:0 2px;color:var(--ink)}
+.feedback{margin-top:14px}
+.feedback>div{border-radius:6px;padding:12px 14px;border:1px solid}
+.feedback .ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.feedback .bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.feedback p{margin:0 0 4px;font-weight:600}
+.feedback ul{margin:4px 0 0;padding-left:20px;color:var(--ink)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+footer{margin-top:28px;color:var(--muted);font-size:.85rem;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+footer button{font:inherit;font-size:.85rem;border:0;background:none;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0}
+.warn{color:var(--bad)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="appTitle"></h1>
+    <div class="lang" role="group" aria-label="Language / Тіл">
+      <button type="button" data-lang="ru" aria-pressed="true">Рус</button>
+      <button type="button" data-lang="kk" aria-pressed="false">Қаз</button>
+    </div>
+  </header>
+
+  <section id="screenStart" class="card">
+    <h2 id="startHead"></h2>
+    <p id="startText"></p>
+    <label for="studentCode" id="codeLabel"></label>
+    <input type="text" id="studentCode" autocomplete="off" maxlength="20">
+    <label class="check"><input type="checkbox" id="consent"><span id="consentText"></span></label>
+    <p id="startError" class="warn" role="alert" hidden></p>
+    <button type="button" class="btn" id="startBtn"></button>
+    <pre id="contentErrors" class="warn" hidden style="white-space:pre-wrap;font:inherit;margin-top:14px"></pre>
+  </section>
+
+  <section id="screenTask" hidden>
+    <div class="progress" id="progress" aria-hidden="true"></div>
+    <div class="card">
+      <p class="meta" id="taskMeta"></p>
+      <h2 id="taskTitle"></h2>
+      <p id="taskText"></p>
+    </div>
+    <div class="grid">
+      <div><h3 id="bankTitle"></h3><div id="bank" class="bank"></div></div>
+      <div><h3 id="solTitle"></h3><div id="sol" class="sol"></div></div>
+    </div>
+    <div id="feedback" class="feedback" role="status" aria-live="polite"></div>
+    <div class="actions">
+      <button type="button" class="btn" id="checkBtn"></button>
+      <button type="button" class="btn secondary" id="resetBtn"></button>
+      <button type="button" class="btn secondary" id="skipBtn" hidden></button>
+      <button type="button" class="btn" id="nextBtn" hidden></button>
+    </div>
+  </section>
+
+  <section id="screenDone" class="card" hidden>
+    <h2 id="doneHead"></h2>
+    <p id="doneText"></p>
+  </section>
+
+  <footer>
+    <span id="modeNote"></span>
+    <button type="button" id="csvBtn"></button>
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script src="tasks.js"></script>
+<script>
+/* ==== LOGIC START ==== */
+/* sol — массив вида [{id:"c1", sel:["..."]}, …]. Возвращает список кодов ошибок (пустой = верно). */
+function evaluateSolution(task, sol){
+  const errs = [];
+  const add = e => { if(!errs.includes(e)) errs.push(e); };
+  const byId = {};
+  task.blocks.forEach(b => { byId[b.id] = b; });
+  const placed = sol.map(s => s.id);
+  if(task.blocks.filter(b => !b.err).some(b => !placed.includes(b.id))) add("missing_block");
+  placed.forEach(id => { if(byId[id].err) add(byId[id].err); });
+  task.rules.forEach(([a,b,e]) => {
+    const ia = placed.indexOf(a), ib = placed.indexOf(b);
+    if(ia > -1 && ib > -1 && ia > ib) add(e);
+  });
+  sol.forEach(s => {
+    const b = byId[s.id];
+    if(!b.blanks) return;
+    b.blanks.forEach((opts,i) => {
+      const v = s.sel[i];
+      if(v === "" || v == null){ add("blank_empty"); return; }
+      const o = opts.find(x => x.v === v);
+      if(o && !o.ok) add(o.err);
+    });
+  });
+  return errs;
+}
+
+/* Проверка файла tasks.js: возвращает список понятных сообщений о том, что исправить. */
+function validateContent(){
+  const p = [];
+  if(!Array.isArray(TASKS) || !TASKS.length){ return ["tasks.js: список заданий пуст."]; }
+  const seen = new Set();
+  const hasErr = e => ERR[e] && ERR[e].ru && ERR[e].kk;
+  TASKS.forEach((k, ti) => {
+    const n = "Задание " + (ti + 1) + " (" + (k.id || "без id") + ")";
+    if(!k.id) p.push(n + ": нет поля id.");
+    else if(seen.has(k.id)) p.push(n + ": id повторяется.");
+    seen.add(k.id);
+    ["title","text"].forEach(f => { if(!k[f] || !k[f].ru || !k[f].kk) p.push(n + ": в поле " + f + " нужны и ru, и kk."); });
+    if(!Array.isArray(k.blocks) || !k.blocks.length){ p.push(n + ": нет блоков."); return; }
+    const ids = new Set();
+    k.blocks.forEach(b => {
+      if(!b.id || ids.has(b.id)) p.push(n + ": id блока пуст или повторяется (" + b.id + ").");
+      ids.add(b.id);
+      if(typeof b.code !== "string") p.push(n + ", блок " + b.id + ": нет code.");
+      if(b.err && !hasErr(b.err)) p.push(n + ", блок " + b.id + ": ошибка «" + b.err + "» не описана в ERR на обоих языках.");
+      const cnt = ((b.code || "").match(/\{\{\d+\}\}/g) || []).length;
+      const bl = (b.blanks || []).length;
+      if(cnt !== bl) p.push(n + ", блок " + b.id + ": пропусков в коде " + cnt + ", а списков вариантов " + bl + ".");
+      (b.blanks || []).forEach((list, i) => {
+        if(list.filter(o => o.ok).length !== 1) p.push(n + ", блок " + b.id + ", пропуск " + i + ": должен быть ровно один верный вариант (ok:true).");
+        list.forEach(o => { if(!o.ok && !hasErr(o.err)) p.push(n + ", блок " + b.id + ": ошибка «" + o.err + "» у варианта «" + o.v + "» не описана в ERR."); });
+      });
+    });
+    if(!k.blocks.some(b => !b.err)) p.push(n + ": нет ни одного нужного блока (без err).");
+    (k.rules || []).forEach(r => {
+      if(!ids.has(r[0]) || !ids.has(r[1])) p.push(n + ": в правиле [" + r.join(", ") + "] есть несуществующий id блока.");
+      if(!hasErr(r[2])) p.push(n + ": ошибка «" + r[2] + "» из правила не описана в ERR.");
+    });
+  });
+  return p;
+}
+/* ==== LOGIC END ==== */
+
+(function(){
+"use strict";
+
+const I18N = {
+  ru:{
+    appTitle:"Python: собери программу",
+    startHead:"Начнём",
+    startText:"Расставьте блоки кода в правильном порядке. Часть блоков лишняя: в решение они не нужны. В последнем задании нужно ещё заполнить пропуски.",
+    codeLabel:"Код участника (его выдаёт преподаватель)",
+    consent:"Я согласен(на) на анонимное использование моих результатов в исследовании.",
+    startBtn:"Начать", needCode:"Введите код участника и отметьте согласие.",
+    bank:"Блоки кода", sol:"Ваша программа",
+    bankEmpty:"Все блоки перенесены.", solEmpty:"Нажмите на блок слева, чтобы добавить его сюда.",
+    check:"Проверить", reset:"Начать заново", skip:"Пропустить задание", next:"Дальше", finish:"Завершить",
+    ok:"Верно! Программа собрана правильно.", bad:"Пока не так. Обратите внимание:",
+    up:"Выше", down:"Ниже", remove:"Убрать блок", choose:"выберите",
+    taskOf:"Задание {n} из {m}",
+    doneHead:"Готово. Спасибо!", doneText:"Ваши результаты записаны. Страницу можно закрыть.",
+    modeTest:"Тестовый режим: данные не отправляются на сервер.", modeLive:"Результаты записываются анонимно.",
+    csv:"Скачать резервную копию (CSV)"
+  },
+  kk:{
+    appTitle:"Python: бағдарламаны құрастыр",
+    startHead:"Бастайық",
+    startText:"Код блоктарын дұрыс ретпен орналастырыңыз. Кейбір блоктар артық: оларды шешімге қосудың қажеті жоқ. Соңғы тапсырмада бос орындарды да толтыру керек.",
+    codeLabel:"Қатысушы коды (оны оқытушы береді)",
+    consent:"Нәтижелерім зерттеуде анонимді түрде пайдаланылуымен келісемін.",
+    startBtn:"Бастау", needCode:"Қатысушы кодын енгізіп, келісімді белгілеңіз.",
+    bank:"Код блоктары", sol:"Сіздің бағдарламаңыз",
+    bankEmpty:"Барлық блок көшірілді.", solEmpty:"Блокты осында қосу үшін сол жақтағы блокты басыңыз.",
+    check:"Тексеру", reset:"Қайтадан бастау", skip:"Тапсырманы өткізу", next:"Келесі", finish:"Аяқтау",
+    ok:"Дұрыс! Бағдарлама дұрыс құрастырылды.", bad:"Әзірге дұрыс емес. Назар аударыңыз:",
+    up:"Жоғары", down:"Төмен", remove:"Блокты алып тастау", choose:"таңдаңыз",
+    taskOf:"{n}-тапсырма, барлығы {m}",
+    doneHead:"Дайын. Рақмет!", doneText:"Нәтижелеріңіз жазылды. Бетті жабуға болады.",
+    modeTest:"Сынақ режимі: деректер серверге жіберілмейді.", modeLive:"Нәтижелер анонимді түрде жазылады.",
+    csv:"Сақтық көшірмені жүктеу (CSV)"
+  }
+};
+
+const qp = new URLSearchParams(location.search);
+let lang = ["ru","kk"].includes(qp.get("lang")) ? qp.get("lang") : "ru";
+const group = qp.get("group") || qp.get("g") || "";
+const phase = qp.get("phase") || "";   // этап эксперимента: например pre, post
+let student = "";
+let screen = "start";   // start | task | done
+let cur = 0;
+let state = null;
+
+const $ = id => document.getElementById(id);
+const t = k => I18N[lang][k];
+
+/* ---------- хранилище и отправка ---------- */
+function loadJSON(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function saveJSON(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+let logRows = loadJSON("parsons_log", []);
+let outbox = loadJSON("parsons_outbox", []);
+const COLS = ["ts","student","group","phase","lang","task","attempt","event","result","errors","seconds","placed","answer"];
+
+let flushing = false;
+async function flush(){
+  if(flushing || !outbox.length || !CONFIG.SHEETS_URL) return;
+  flushing = true;
+  try{
+    while(outbox.length){
+      await fetch(CONFIG.SHEETS_URL, {
+        method:"POST", mode:"no-cors",
+        headers:{"Content-Type":"text/plain;charset=utf-8"},
+        body: JSON.stringify(outbox[0])
+      });
+      outbox.shift();
+      saveJSON("parsons_outbox", outbox);
+    }
+  }catch(e){ /* нет сети: строки остаются в очереди и уйдут позже */ }
+  flushing = false;
+}
+window.addEventListener("online", flush);
+
+function record(extra){
+  const row = Object.assign({
+    ts:new Date().toISOString(), student:student, group:group, phase:phase, lang:lang,
+    task:"", attempt:"", event:"", result:"", errors:"", seconds:"", placed:"", answer:""
+  }, extra);
+  logRows.push(row);
+  saveJSON("parsons_log", logRows);
+  if(CONFIG.SHEETS_URL){ outbox.push(row); saveJSON("parsons_outbox", outbox); flush(); }
+}
+
+function secondsOnTask(){ return Math.round((Date.now() - state.start) / 1000); }
+function answerString(){
+  return state.sol.map(s => s.id + (s.sel.length ? "[" + s.sel.join("|") + "]" : "")).join(">");
+}
+
+function downloadCSV(){
+  const esc = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const lines = [COLS.join(",")].concat(logRows.map(r => COLS.map(c => esc(r[c])).join(",")));
+  const blob = new Blob(["\ufeff" + lines.join("\n")], {type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "parsons_results.csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/* ---------- вспомогательное ---------- */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function blockById(task, id){ return task.blocks.find(b => b.id === id); }
+
+/* Код блока: текст и поля выбора вместо {{n}}. withSelects=false — рисуем «___». */
+function fillCode(container, block, sel, onChange, locked){
+  const parts = block.code.split(/\{\{(\d+)\}\}/);
+  parts.forEach((p, i) => {
+    if(i % 2 === 0){
+      if(p) container.appendChild(document.createTextNode(p));
+      return;
+    }
+    const idx = Number(p);
+    if(!sel){ container.appendChild(document.createTextNode("___")); return; }
+    const s = document.createElement("select");
+    s.className = "blank";
+    s.disabled = locked;
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "— " + t("choose") + " —";
+    s.appendChild(ph);
+    state.opts[block.id][idx].forEach(v => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = v;
+      s.appendChild(o);
+    });
+    s.value = sel[idx] || "";
+    s.addEventListener("change", () => onChange(idx, s.value));
+    container.appendChild(s);
+  });
+}
+
+/* ---------- отрисовка ---------- */
+function renderStatic(){
+  document.documentElement.lang = lang === "kk" ? "kk" : "ru";
+  document.title = t("appTitle");
+  $("appTitle").textContent = t("appTitle");
+  $("startHead").textContent = t("startHead");
+  $("startText").textContent = t("startText");
+  $("codeLabel").textContent = t("codeLabel");
+  $("consentText").textContent = t("consent");
+  $("startBtn").textContent = t("startBtn");
+  $("bankTitle").textContent = t("bank");
+  $("solTitle").textContent = t("sol");
+  $("checkBtn").textContent = t("check");
+  $("resetBtn").textContent = t("reset");
+  $("skipBtn").textContent = t("skip");
+  $("doneHead").textContent = t("doneHead");
+  $("doneText").textContent = t("doneText");
+  $("csvBtn").textContent = t("csv");
+  $("modeNote").textContent = CONFIG.SHEETS_URL ? t("modeLive") : t("modeTest");
+  document.querySelectorAll(".lang button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+}
+
+function renderBank(){
+  const task = TASKS[cur], box = $("bank");
+  box.textContent = "";
+  if(!state.bank.length){
+    const p = document.createElement("p"); p.className = "empty"; p.textContent = t("bankEmpty");
+    box.appendChild(p); return;
+  }
+  state.bank.forEach(id => {
+    const b = blockById(task, id);
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "block"; btn.disabled = state.done;
+    fillCode(btn, b, null);
+    btn.addEventListener("click", () => {
+      state.bank = state.bank.filter(x => x !== id);
+      state.sol.push({id:id, sel:(b.blanks || []).map(() => "")});
+      clearFeedback(); renderBank(); renderSol();
+    });
+    box.appendChild(btn);
+  });
+}
+
+function move(from, to){
+  if(to < 0 || to >= state.sol.length || from === to) return;
+  const [item] = state.sol.splice(from, 1);
+  state.sol.splice(to, 0, item);
+  clearFeedback(); renderSol();
+}
+
+function renderSol(){
+  const task = TASKS[cur], box = $("sol");
+  box.textContent = "";
+  if(!state.sol.length){
+    const p = document.createElement("p"); p.className = "empty"; p.textContent = t("solEmpty");
+    box.appendChild(p); return;
+  }
+  state.sol.forEach((s, i) => {
+    const b = blockById(task, s.id);
+    const row = document.createElement("div");
+    row.className = "row";
+    row.draggable = !state.done;
+    row.addEventListener("dragstart", e => { state.dragFrom = i; row.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; try{ e.dataTransfer.setData("text/plain", String(i)); }catch(_){} });
+    row.addEventListener("dragend", () => row.classList.remove("dragging"));
+    row.addEventListener("dragover", e => e.preventDefault());
+    row.addEventListener("drop", e => { e.preventDefault(); if(state.dragFrom != null) move(state.dragFrom, i); state.dragFrom = null; });
+
+    const ln = document.createElement("span"); ln.className = "ln"; ln.textContent = String(i + 1);
+    const code = document.createElement("div"); code.className = "block";
+    fillCode(code, b, s.sel, (idx, v) => { s.sel[idx] = v; clearFeedback(); }, state.done);
+
+    const ctl = document.createElement("div"); ctl.className = "ctl";
+    const mk = (label, text, fn, dis) => {
+      const x = document.createElement("button");
+      x.type = "button"; x.textContent = text; x.title = label; x.setAttribute("aria-label", label);
+      x.disabled = dis || state.done; x.addEventListener("click", fn); return x;
+    };
+    ctl.appendChild(mk(t("up"), "↑", () => move(i, i - 1), i === 0));
+    ctl.appendChild(mk(t("down"), "↓", () => move(i, i + 1), i === state.sol.length - 1));
+    ctl.appendChild(mk(t("remove"), "✕", () => {
+      state.sol.splice(i, 1); state.bank.push(s.id); clearFeedback(); renderBank(); renderSol();
+    }));
+
+    row.appendChild(ln); row.appendChild(code); row.appendChild(ctl);
+    box.appendChild(row);
+  });
+}
+
+function clearFeedback(){ state.fb = null; renderFeedback(); }
+
+function renderFeedback(){
+  const box = $("feedback");
+  box.textContent = "";
+  if(!state || !state.fb) return;
+  const d = document.createElement("div");
+  const p = document.createElement("p");
+  if(state.fb.ok){
+    d.className = "ok"; p.textContent = t("ok"); d.appendChild(p);
+  }else{
+    d.className = "bad"; p.textContent = t("bad"); d.appendChild(p);
+    const ul = document.createElement("ul");
+    state.fb.errs.forEach(e => {
+      const li = document.createElement("li"); li.textContent = ERR[e][lang]; ul.appendChild(li);
+    });
+    d.appendChild(ul);
+  }
+  box.appendChild(d);
+}
+
+function renderTask(){
+  const task = TASKS[cur];
+  $("progress").textContent = "";
+  TASKS.forEach((_, i) => {
+    const s = document.createElement("span");
+    if(i < cur) s.className = "done"; else if(i === cur) s.className = "current";
+    $("progress").appendChild(s);
+  });
+  $("taskMeta").textContent = t("taskOf").replace("{n}", cur + 1).replace("{m}", TASKS.length);
+  $("taskTitle").textContent = task.title[lang];
+  $("taskText").textContent = task.text[lang];
+  $("nextBtn").textContent = cur + 1 < TASKS.length ? t("next") : t("finish");
+  $("checkBtn").hidden = state.done;
+  $("resetBtn").hidden = state.done;
+  $("nextBtn").hidden = !state.done;
+  $("skipBtn").hidden = state.done || state.attempts < CONFIG.SKIP_AFTER;
+  renderBank(); renderSol(); renderFeedback();
+}
+
+function show(name){
+  screen = name;
+  $("screenStart").hidden = name !== "start";
+  $("screenTask").hidden = name !== "task";
+  $("screenDone").hidden = name !== "done";
+}
+
+/* ---------- ход работы ---------- */
+function startTask(i){
+  cur = i;
+  const task = TASKS[i];
+  state = {
+    bank: shuffle(task.blocks.map(b => b.id)), sol: [], attempts: 0, start: Date.now(),
+    done: false, fb: null, dragFrom: null, opts: {}
+  };
+  task.blocks.forEach(b => {
+    if(b.blanks) state.opts[b.id] = b.blanks.map(list => shuffle(list.map(o => o.v)));
+  });
+  record({task:task.id, event:"start"});
+  show("task"); renderTask();
+}
+
+function onCheck(){
+  const task = TASKS[cur];
+  state.attempts++;
+  const errs = evaluateSolution(task, state.sol);
+  const ok = errs.length === 0;
+  record({task:task.id, attempt:state.attempts, event:"check", result: ok ? "ok" : "fail",
+          errors: errs.join(";"), seconds: secondsOnTask(), placed: state.sol.length, answer: answerString()});
+  state.fb = {ok:ok, errs:errs};
+  if(ok) state.done = true;
+  renderTask();
+}
+
+function onSkip(){
+  const task = TASKS[cur];
+  record({task:task.id, attempt:state.attempts, event:"skip", result:"skip",
+          seconds: secondsOnTask(), placed: state.sol.length, answer: answerString()});
+  state.done = true;
+  goNext();
+}
+
+function goNext(){
+  if(cur + 1 < TASKS.length){ startTask(cur + 1); }
+  else{
+    record({event:"finish"});
+    show("done");
+  }
+}
+
+function onReset(){
+  const task = TASKS[cur];
+  state.bank = shuffle(task.blocks.map(b => b.id));
+  state.sol = []; state.fb = null;
+  renderTask();
+}
+
+/* ---------- события ---------- */
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => {
+  lang = b.dataset.lang;
+  renderStatic();
+  if(screen === "task") renderTask();
+}));
+$("startBtn").addEventListener("click", () => {
+  const code = $("studentCode").value.trim();
+  if(!code || !$("consent").checked){
+    $("startError").textContent = t("needCode"); $("startError").hidden = false; return;
+  }
+  $("startError").hidden = true;
+  student = code;
+  try{ localStorage.setItem("parsons_student", code); }catch(e){}
+  startTask(0);
+});
+$("checkBtn").addEventListener("click", onCheck);
+$("resetBtn").addEventListener("click", onReset);
+$("skipBtn").addEventListener("click", onSkip);
+$("nextBtn").addEventListener("click", goNext);
+$("csvBtn").addEventListener("click", downloadCSV);
+
+try{ $("studentCode").value = localStorage.getItem("parsons_student") || ""; }catch(e){}
+renderStatic();
+show("start");
+const contentProblems = validateContent();
+if(contentProblems.length){
+  $("contentErrors").textContent = "Нужно исправить файл tasks.js:\n- " + contentProblems.join("\n- ");
+  $("contentErrors").hidden = false;
+  $("startBtn").disabled = true;
+}
+flush();
+})();
+</script>
+</body>
+</html>
