@@ -199,6 +199,8 @@ const I18N = {
     startText:"Расставьте блоки кода в правильном порядке. Часть блоков лишняя: в решение они не нужны. В последнем задании нужно ещё заполнить пропуски.",
     codeLabel:"Код участника (его выдаёт преподаватель)",
     consent:"Я согласен(на) на анонимное использование моих результатов в исследовании.",
+    startTest:"Это проверочная работа: подсказок не будет, на каждое задание даётся одна попытка. Расставьте блоки кода в правильном порядке; часть блоков лишняя. Ответ отправляется кнопкой, после этого изменить его нельзя.",
+    answer:"Ответить", confirmSend:"Отправить ответ? Изменить его будет нельзя.", noTasks:"Для этапа «{p}» нет заданий.",
     startBtn:"Начать", needCode:"Введите код участника и отметьте согласие.",
     bank:"Блоки кода", sol:"Ваша программа",
     bankEmpty:"Все блоки перенесены.", solEmpty:"Нажмите на блок слева, чтобы добавить его сюда.",
@@ -216,6 +218,8 @@ const I18N = {
     startText:"Код блоктарын дұрыс ретпен орналастырыңыз. Кейбір блоктар артық: оларды шешімге қосудың қажеті жоқ. Соңғы тапсырмада бос орындарды да толтыру керек.",
     codeLabel:"Қатысушы коды (оны оқытушы береді)",
     consent:"Нәтижелерім зерттеуде анонимді түрде пайдаланылуымен келісемін.",
+    startTest:"Бұл тексеру жұмысы: кеңестер болмайды, әр тапсырмаға бір әрекет беріледі. Код блоктарын дұрыс ретпен орналастырыңыз; кейбір блоктар артық. Жауап батырмамен жіберіледі, содан кейін оны өзгерту мүмкін емес.",
+    answer:"Жауап беру", confirmSend:"Жауапты жіберу керек пе? Кейін өзгерту мүмкін болмайды.", noTasks:"«{p}» кезеңі үшін тапсырма жоқ.",
     startBtn:"Бастау", needCode:"Қатысушы кодын енгізіп, келісімді белгілеңіз.",
     bank:"Код блоктары", sol:"Сіздің бағдарламаңыз",
     bankEmpty:"Барлық блок көшірілді.", solEmpty:"Блокты осында қосу үшін сол жақтағы блокты басыңыз.",
@@ -232,7 +236,11 @@ const I18N = {
 const qp = new URLSearchParams(location.search);
 let lang = ["ru","kk"].includes(qp.get("lang")) ? qp.get("lang") : "ru";
 const group = qp.get("group") || qp.get("g") || "";
-const phase = qp.get("phase") || "";   // этап эксперимента: например pre, post
+const phase = qp.get("phase") || "";   // этап эксперимента: pre, learn, post
+// pre и post — проверочные срезы: без подсказок, одна попытка. Остальное — обучение с подсказками.
+const mode = qp.get("mode") || ((phase === "pre" || phase === "post") ? "test" : "learn");
+const testMode = mode === "test";
+const ACTIVE = TASKS.filter(t => !t.use || t.use.includes(phase || "learn"));
 let student = "";
 let screen = "start";   // start | task | done
 let cur = 0;
@@ -337,13 +345,13 @@ function renderStatic(){
   document.title = t("appTitle");
   $("appTitle").textContent = t("appTitle");
   $("startHead").textContent = t("startHead");
-  $("startText").textContent = t("startText");
+  $("startText").textContent = testMode ? t("startTest") : t("startText");
   $("codeLabel").textContent = t("codeLabel");
   $("consentText").textContent = t("consent");
   $("startBtn").textContent = t("startBtn");
   $("bankTitle").textContent = t("bank");
   $("solTitle").textContent = t("sol");
-  $("checkBtn").textContent = t("check");
+  $("checkBtn").textContent = testMode ? t("answer") : t("check");
   $("resetBtn").textContent = t("reset");
   $("skipBtn").textContent = t("skip");
   $("doneHead").textContent = t("doneHead");
@@ -355,7 +363,7 @@ function renderStatic(){
 }
 
 function renderBank(){
-  const task = TASKS[cur], box = $("bank");
+  const task = ACTIVE[cur], box = $("bank");
   box.textContent = "";
   if(!state.bank.length){
     const p = document.createElement("p"); p.className = "empty"; p.textContent = t("bankEmpty");
@@ -383,7 +391,7 @@ function move(from, to){
 }
 
 function renderSol(){
-  const task = TASKS[cur], box = $("sol");
+  const task = ACTIVE[cur], box = $("sol");
   box.textContent = "";
   if(!state.sol.length){
     const p = document.createElement("p"); p.className = "empty"; p.textContent = t("solEmpty");
@@ -442,21 +450,21 @@ function renderFeedback(){
 }
 
 function renderTask(){
-  const task = TASKS[cur];
+  const task = ACTIVE[cur];
   $("progress").textContent = "";
-  TASKS.forEach((_, i) => {
+  ACTIVE.forEach((_, i) => {
     const s = document.createElement("span");
     if(i < cur) s.className = "done"; else if(i === cur) s.className = "current";
     $("progress").appendChild(s);
   });
-  $("taskMeta").textContent = t("taskOf").replace("{n}", cur + 1).replace("{m}", TASKS.length);
+  $("taskMeta").textContent = t("taskOf").replace("{n}", cur + 1).replace("{m}", ACTIVE.length);
   $("taskTitle").textContent = task.title[lang];
   $("taskText").textContent = task.text[lang];
-  $("nextBtn").textContent = cur + 1 < TASKS.length ? t("next") : t("finish");
+  $("nextBtn").textContent = cur + 1 < ACTIVE.length ? t("next") : t("finish");
   $("checkBtn").hidden = state.done;
-  $("resetBtn").hidden = state.done;
+  $("resetBtn").hidden = state.done || testMode;
   $("nextBtn").hidden = !state.done;
-  $("skipBtn").hidden = state.done || state.attempts < CONFIG.SKIP_AFTER;
+  $("skipBtn").hidden = testMode || state.done || state.attempts < CONFIG.SKIP_AFTER;
   renderBank(); renderSol(); renderFeedback();
 }
 
@@ -470,7 +478,7 @@ function show(name){
 /* ---------- ход работы ---------- */
 function startTask(i){
   cur = i;
-  const task = TASKS[i];
+  const task = ACTIVE[i];
   state = {
     bank: shuffle(task.blocks.map(b => b.id)), sol: [], attempts: 0, start: Date.now(),
     done: false, fb: null, dragFrom: null, opts: {}
@@ -483,19 +491,21 @@ function startTask(i){
 }
 
 function onCheck(){
-  const task = TASKS[cur];
+  const task = ACTIVE[cur];
+  if(testMode && !window.confirm(t("confirmSend"))) return;
   state.attempts++;
   const errs = evaluateSolution(task, state.sol);
   const ok = errs.length === 0;
   record({task:task.id, attempt:state.attempts, event:"check", result: ok ? "ok" : "fail",
           errors: errs.join(";"), seconds: secondsOnTask(), placed: state.sol.length, answer: answerString()});
+  if(testMode){ state.done = true; goNext(); return; }   // проверочный режим: без подсказок, сразу дальше
   state.fb = {ok:ok, errs:errs};
   if(ok) state.done = true;
   renderTask();
 }
 
 function onSkip(){
-  const task = TASKS[cur];
+  const task = ACTIVE[cur];
   record({task:task.id, attempt:state.attempts, event:"skip", result:"skip",
           seconds: secondsOnTask(), placed: state.sol.length, answer: answerString()});
   state.done = true;
@@ -503,7 +513,7 @@ function onSkip(){
 }
 
 function goNext(){
-  if(cur + 1 < TASKS.length){ startTask(cur + 1); }
+  if(cur + 1 < ACTIVE.length){ startTask(cur + 1); }
   else{
     record({event:"finish"});
     show("done");
@@ -511,7 +521,7 @@ function goNext(){
 }
 
 function onReset(){
-  const task = TASKS[cur];
+  const task = ACTIVE[cur];
   state.bank = shuffle(task.blocks.map(b => b.id));
   state.sol = []; state.fb = null;
   renderTask();
@@ -543,6 +553,7 @@ try{ $("studentCode").value = localStorage.getItem("parsons_student") || ""; }ca
 renderStatic();
 show("start");
 const contentProblems = validateContent();
+if(!ACTIVE.length) contentProblems.push(I18N.ru.noTasks.replace("{p}", phase));
 if(contentProblems.length){
   $("contentErrors").textContent = "Нужно исправить файл tasks.js:\n- " + contentProblems.join("\n- ");
   $("contentErrors").hidden = false;
